@@ -1,0 +1,23 @@
+echo "# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+/auth-server
+/auth-service
+
+.idea/
+.vscode/
+*.swp
+*.swo
+
+.DS_Store
+Thumbs.db
+
+.env
+.env.local
+
+*.log
+
+go.sum" > .gitignore
