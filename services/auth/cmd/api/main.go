@@ -1,18 +1,19 @@
 package main
 
 import (
-	"auth/internal/adapter/repository/mysql"
-	"auth/internal/adapter/transport/http/handler"
-	"auth/internal/usecase"
-	"database/sql"
 	"log"
 	"net/http"
 	"os"
 	"time"
 
 	"auth/internal/adapter/hasher"
+	"auth/internal/adapter/httpserver"
 	"auth/internal/adapter/jwtadapter"
+	mysqldb "auth/internal/adapter/repository/mysql"
 	httptransport "auth/internal/adapter/transport/http"
+	"auth/internal/adapter/transport/http/handler"
+	"auth/internal/usecase"
+
 	_ "github.com/go-sql-driver/mysql"
 )
 
@@ -24,7 +25,6 @@ func main() {
 	dbName := os.Getenv("DB_NAME")
 	jwtSecret := os.Getenv("JWT_SECRET")
 
-	// для локальной среды
 	if dbHost == "" {
 		dbHost = "mysql"
 	}
@@ -45,34 +45,20 @@ func main() {
 	}
 
 	dsn := dbUser + ":" + dbPassword + "@tcp(" + dbHost + ":" + dbPort + ")/" + dbName + "?charset=utf8mb4&parseTime=True&loc=Local"
-	db, err := sql.Open("mysql", dsn)
+	db, err := mysqldb.OpenDB(dsn)
 	if err != nil {
 		log.Fatal("Failed to connect to database:", err)
 	}
-	defer db.Close()
 
-	if err := db.Ping(); err != nil {
-		log.Fatal("Failed to ping database:", err)
-	}
-
-	// Репозитории
-	userRepo := mysql.NewUserRepository(db)
-	teamRepo := mysql.NewTeamRepository(db)
-
-	// Хешер и JWT
+	userRepo := mysqldb.NewUserRepository(db)
 	passwordHasher := hasher.NewBcryptHasher()
 	accessTTL := 15 * time.Minute
 	jwtManager := jwtadapter.NewJWTManager(jwtSecret, accessTTL)
 
-	// Usecases
 	authUsecase := usecase.NewAuthUsecase(userRepo, jwtManager, passwordHasher)
-	teamUsecase := usecase.NewTeamUsecase(teamRepo, userRepo)
-
-	// Handlers
 	authHandler := handler.NewAuthHandler(authUsecase)
-	teamHandler := handler.NewTeamHandler(teamUsecase)
 
-	router := httptransport.SetupRouter(authHandler, teamHandler, jwtManager)
+	router := httptransport.SetupRouter(authHandler)
 
 	port := os.Getenv("HTTP_PORT")
 	if port == "" {
@@ -84,8 +70,7 @@ func main() {
 		Handler: router,
 	}
 
-	log.Println("Server starting on port", port)
-	if err := server.ListenAndServe(); err != nil {
-		log.Fatal("Server failed:", err)
+	if err := httpserver.Run("Auth server", server, func() { db.Close() }); err != nil {
+		log.Fatal(err)
 	}
 }

@@ -66,6 +66,9 @@ func (uc *AuthUsecase) Login(ctx context.Context, req *domain.LoginRequest) (*do
 	if err != nil {
 		return nil, domain.ErrInvalidCredentials
 	}
+	if user == nil {
+		return nil, domain.ErrInvalidCredentials
+	}
 
 	if err := uc.hasher.Compare(ctx, user.Password, req.Password); err != nil {
 		return nil, domain.ErrInvalidCredentials

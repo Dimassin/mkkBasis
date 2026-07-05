@@ -30,3 +30,14 @@ type TeamMember struct {
 	Role     string    `json:"role"`
 	JoinedAt time.Time `json:"joined_at"`
 }
+
+type InviteMemberRequest struct {
+	Email string `json:"email"`
+}
+
+type InviteMemberResponse struct {
+	TeamID int    `json:"team_id"`
+	UserID int    `json:"user_id"`
+	Email  string `json:"email"`
+	Role   string `json:"role"`
+}

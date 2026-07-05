@@ -1,19 +1,22 @@
 package http
 
 import (
+	"net/http"
+	"time"
+
 	"auth/internal/adapter/middleware"
 	"auth/internal/adapter/transport/http/handler"
-	"auth/internal/ports"
-	"net/http"
+
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-func SetupRouter(authHandler *handler.AuthHandler, teamHandler *handler.TeamHandler, tokenMgr ports.TokenManager) http.Handler {
+func SetupRouter(authHandler *handler.AuthHandler) http.Handler {
 	mux := http.NewServeMux()
+	limiter := middleware.NewRateLimiter(100, time.Minute)
 
-	mux.HandleFunc("POST /api/v1/register", authHandler.Register)
-	mux.HandleFunc("POST /api/v1/login", authHandler.Login)
+	mux.Handle("GET /metrics", promhttp.Handler())
+	mux.Handle("POST /api/v1/register", limiter.Middleware(http.HandlerFunc(authHandler.Register)))
+	mux.Handle("POST /api/v1/login", limiter.Middleware(http.HandlerFunc(authHandler.Login)))
 
-	mux.Handle("POST /api/v1/teams", middleware.AuthMiddleware(tokenMgr)(http.HandlerFunc(teamHandler.CreateTeam)))
-
-	return mux
+	return middleware.Metrics(mux)
 }

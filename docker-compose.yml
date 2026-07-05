@@ -43,6 +43,7 @@ services:
       DB_USER: myuser
       DB_PASSWORD: mypassword
       DB_NAME: auth
+      JWT_SECRET: your-secret-key-change-in-production
       REDIS_HOST: redis
       REDIS_PORT: 6379
       REDIS_PASSWORD: redispassword
@@ -54,6 +55,55 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    restart: unless-stopped
+
+  teams:
+    build:
+      context: .
+      dockerfile: Dockerfile.teams
+    container_name: teams-service
+    environment:
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_USER: myuser
+      DB_PASSWORD: mypassword
+      DB_NAME: auth
+      JWT_SECRET: your-secret-key-change-in-production
+      HTTP_PORT: 8081
+    ports:
+      - "8081:8081"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      auth:
+        condition: service_started
+    restart: unless-stopped
+
+  tasks:
+    build:
+      context: .
+      dockerfile: Dockerfile.tasks
+    container_name: tasks-service
+    environment:
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_USER: myuser
+      DB_PASSWORD: mypassword
+      DB_NAME: auth
+      JWT_SECRET: your-secret-key-change-in-production
+      HTTP_PORT: 8082
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: redispassword
+    ports:
+      - "8082:8082"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      teams:
+        condition: service_started
     restart: unless-stopped
 
 volumes:

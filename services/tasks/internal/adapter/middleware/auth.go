@@ -1,17 +1,18 @@
 package middleware
 
 import (
-	"auth/internal/ports"
 	"context"
 	"net/http"
+	"strconv"
 	"strings"
+	"tasks/internal/ports"
 )
 
 type contextKey string
 
 const UserIDKey contextKey = "user_id"
 
-func AuthMiddleware(tokenMgr ports.TokenManager) func(http.Handler) http.Handler {
+func AuthMiddleware(tokenValidator ports.TokenValidator) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			authHeader := r.Header.Get("Authorization")
@@ -26,14 +27,19 @@ func AuthMiddleware(tokenMgr ports.TokenManager) func(http.Handler) http.Handler
 				return
 			}
 
-			token := parts[1]
-			userClaims, err := tokenMgr.ValidateToken(r.Context(), token)
+			userClaims, err := tokenValidator.ValidateToken(r.Context(), parts[1])
 			if err != nil {
 				http.Error(w, "Invalid token", http.StatusUnauthorized)
 				return
 			}
 
-			ctx := context.WithValue(r.Context(), UserIDKey, userClaims.UserID)
+			userID, err := strconv.Atoi(userClaims.UserID)
+			if err != nil || userID == 0 {
+				http.Error(w, "Invalid token", http.StatusUnauthorized)
+				return
+			}
+
+			ctx := context.WithValue(r.Context(), UserIDKey, userID)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}

@@ -12,6 +12,12 @@ type UserRepository struct {
 	db *sql.DB
 }
 
+func NewUserRepository(db *sql.DB) *UserRepository {
+	return &UserRepository{
+		db: db,
+	}
+}
+
 func (r *UserRepository) Create(ctx context.Context, user *domain.User) error {
 	query := `INSERT INTO users (email, password_hash, username) VALUES (?, ?, ?)`
 
@@ -42,15 +48,4 @@ func (r *UserRepository) FindByEmail(ctx context.Context, email string) (*domain
 		return nil, err
 	}
 	return user, nil
-}
-
-func (u UserRepository) FindByID(ctx context.Context, id string) (*domain.User, error) {
-	//TODO implement me
-	panic("implement me")
-}
-
-func NewUserRepository(db *sql.DB) *UserRepository {
-	return &UserRepository{
-		db: db,
-	}
 }
