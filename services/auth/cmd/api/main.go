@@ -55,22 +55,35 @@ func main() {
 		log.Fatal("Failed to ping database:", err)
 	}
 
+	// Репозитории
 	userRepo := mysql.NewUserRepository(db)
+	teamRepo := mysql.NewTeamRepository(db)
+
+	// Хешер и JWT
 	passwordHasher := hasher.NewBcryptHasher()
 	accessTTL := 15 * time.Minute
 	jwtManager := jwtadapter.NewJWTManager(jwtSecret, accessTTL)
-	authUsecase := usecase.NewAuthUsecase(userRepo, jwtManager, passwordHasher)
 
+	// Usecases
+	authUsecase := usecase.NewAuthUsecase(userRepo, jwtManager, passwordHasher)
+	teamUsecase := usecase.NewTeamUsecase(teamRepo, userRepo)
+
+	// Handlers
 	authHandler := handler.NewAuthHandler(authUsecase)
-	router := httptransport.SetupRouter(authHandler)
+	teamHandler := handler.NewTeamHandler(teamUsecase)
+
+	router := httptransport.SetupRouter(authHandler, teamHandler, jwtManager)
+
 	port := os.Getenv("HTTP_PORT")
 	if port == "" {
 		port = "8080"
 	}
+
 	server := &http.Server{
 		Addr:    ":" + port,
 		Handler: router,
 	}
+
 	log.Println("Server starting on port", port)
 	if err := server.ListenAndServe(); err != nil {
 		log.Fatal("Server failed:", err)

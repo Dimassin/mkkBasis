@@ -29,9 +29,18 @@ func (m *JWTManager) GenerateAccessToken(ctx context.Context, user *domain.User)
 	return token.SignedString([]byte(m.secretKey))
 }
 
-func (J JWTManager) GenerateRefreshToken(ctx context.Context, user *domain.User) (string, error) {
-	//TODO implement me
-	panic("implement me########")
+func (m *JWTManager) ValidateToken(ctx context.Context, token string) (*domain.UserClaims, error) {
+	claims := &domain.UserClaims{}
+
+	_, err := jwt.ParseWithClaims(token, claims, func(token *jwt.Token) (interface{}, error) {
+		return []byte(m.secretKey), nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return claims, nil
 }
 
 func NewJWTManager(secretKey string, accessTTL time.Duration) ports.TokenManager {

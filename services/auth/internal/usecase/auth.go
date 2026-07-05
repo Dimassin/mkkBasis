@@ -60,3 +60,26 @@ func (uc *AuthUsecase) Register(ctx context.Context, req *domain.RegisterRequest
 		Username:    user.Username,
 	}, nil
 }
+
+func (uc *AuthUsecase) Login(ctx context.Context, req *domain.LoginRequest) (*domain.AuthResponse, error) {
+	user, err := uc.userRepo.FindByEmail(ctx, req.Email)
+	if err != nil {
+		return nil, domain.ErrInvalidCredentials
+	}
+
+	if err := uc.hasher.Compare(ctx, user.Password, req.Password); err != nil {
+		return nil, domain.ErrInvalidCredentials
+	}
+
+	accessToken, err := uc.tokenMgr.GenerateAccessToken(ctx, user)
+	if err != nil {
+		return nil, domain.ErrInternalServer
+	}
+
+	return &domain.AuthResponse{
+		AccessToken: accessToken,
+		UserID:      user.ID,
+		Email:       user.Email,
+		Username:    user.Username,
+	}, nil
+}

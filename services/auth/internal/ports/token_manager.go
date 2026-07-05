@@ -7,5 +7,5 @@ import (
 
 type TokenManager interface {
 	GenerateAccessToken(ctx context.Context, user *domain.User) (string, error)
-	GenerateRefreshToken(ctx context.Context, user *domain.User) (string, error)
+	ValidateToken(ctx context.Context, token string) (*domain.UserClaims, error)
 }
